@@ -4,8 +4,8 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "ts-node-dev src/index.ts",
+    "start": "node -r dotenv/config dist/index.js",
+    "dev": "ts-node-dev -r dotenv/config src/index.ts",
     "postinstall": "npm run build"
   },
   "dependencies": {
