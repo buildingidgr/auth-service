@@ -58,5 +58,17 @@ export class TokenService {
       return null;
     }
   }
+
+  async getTokenExpiration(token: string): Promise<number> {
+    try {
+      const decoded = jwt.decode(token) as jwt.JwtPayload;
+      if (decoded && decoded.exp) {
+        return Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
+      }
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+    return 0;
+  }
 }
 
