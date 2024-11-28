@@ -30,19 +30,28 @@ export class TokenService {
 
   async validateRefreshToken(token: string): Promise<any> {
     try {
+      console.log('Validating refresh token:', token);
       const decoded = jwt.verify(token, this.jwtSecret) as jwt.JwtPayload;
+      console.log('Decoded token:', decoded);
+      
       if (decoded.type !== 'refresh') {
+        console.log('Token type is not refresh');
         return null;
       }
       
       // Check if refresh token is in Redis
       const storedToken = await redisClient.get(`refresh_token:${decoded.sub}`);
+      console.log('Stored token in Redis:', storedToken);
+      
       if (!storedToken || storedToken !== token) {
+        console.log('Token not found in Redis or does not match');
         return null;
       }
 
+      console.log('Refresh token is valid');
       return { id: decoded.sub };
-    } catch {
+    } catch (error) {
+      console.error('Error validating refresh token:', error);
       return null;
     }
   }
