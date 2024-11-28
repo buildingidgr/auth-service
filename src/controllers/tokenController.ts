@@ -6,8 +6,13 @@ import { TokenService } from '../services/tokenService';
 
 export class TokenController {
   private redis = createClient({ url: process.env.REDIS_URL });
-  private apiKeyService = new ApiKeyService();
-  private tokenService = new TokenService();
+  private apiKeyService: ApiKeyService;
+  private tokenService: TokenService;
+
+  constructor() {
+    this.apiKeyService = new ApiKeyService();
+    this.tokenService = new TokenService();
+  }
 
   async exchangeApiKey(req: Request, res: Response, next: NextFunction) {
     try {

@@ -13,6 +13,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 
+// Trust first proxy
+app.set('trust proxy', 1);
+
 // Redis client for caching
 const redis = createClient({
   url: process.env.REDIS_URL
