@@ -27,23 +27,6 @@ export class TokenController {
         return res.status(401).json({ error: 'Invalid API key' });
       }
 
-      // Check if we already have a valid access token for this user
-      const existingToken = await redisClient.get(`access_token:${user.id}`);
-      if (existingToken) {
-        // Verify the existing token
-        try {
-          jwt.verify(existingToken, process.env.JWT_SECRET!);
-          // If verification succeeds, return the existing token
-          return res.json({
-            access_token: existingToken,
-            token_type: 'Bearer',
-            expires_in: await this.tokenService.getTokenExpiration(existingToken)
-          });
-        } catch (error) {
-          // If verification fails (e.g., token expired), continue to generate new tokens
-        }
-      }
-
       // Generate new tokens
       const accessToken = await this.tokenService.generateAccessToken(user);
       const refreshToken = await this.tokenService.generateRefreshToken(user);
