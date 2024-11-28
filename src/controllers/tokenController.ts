@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
 import { redisClient } from '../utils/redis';
 import { ApiKeyService } from '../services/apiKeyService';
 import { TokenService } from '../services/tokenService';
@@ -45,6 +44,7 @@ export class TokenController {
         expires_in: 3600 // 1 hour
       });
     } catch (error) {
+      console.error('Error in exchangeApiKey:', error);
       next(error);
     }
   }
@@ -56,6 +56,8 @@ export class TokenController {
       if (!refresh_token) {
         return res.status(400).json({ error: 'Refresh token is required' });
       }
+
+      console.log('Received refresh token:', refresh_token);
 
       const user = await this.tokenService.validateRefreshToken(refresh_token);
       if (!user) {
@@ -79,6 +81,10 @@ export class TokenController {
         expires_in: 3600 // 1 hour
       });
     } catch (error) {
+      console.error('Error in refreshToken:', error);
+      if (error instanceof jwt.JsonWebTokenError) {
+        return res.status(401).json({ error: 'Invalid token format' });
+      }
       next(error);
     }
   }
@@ -94,6 +100,7 @@ export class TokenController {
       const isValid = await this.tokenService.validateAccessToken(token);
       res.json({ isValid });
     } catch (error) {
+      console.error('Error in validateToken:', error);
       next(error);
     }
   }

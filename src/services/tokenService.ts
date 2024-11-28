@@ -31,6 +31,9 @@ export class TokenService {
   async validateRefreshToken(token: string): Promise<any> {
     try {
       console.log('Validating refresh token:', token);
+      console.log('Token length:', token.length);
+      console.log('Token parts:', token.split('.').length);
+
       const decoded = jwt.verify(token, this.jwtSecret) as jwt.JwtPayload;
       console.log('Decoded token:', decoded);
       
