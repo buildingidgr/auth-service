@@ -3,10 +3,10 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
-import { createClient } from 'redis';
 import { tokenRouter } from './routes/token';
 import { errorHandler } from './middleware/errorHandler';
 import { validateRequest } from './middleware/validateRequest';
+import { connectRedis } from './utils/redis';
 
 dotenv.config();
 
@@ -15,11 +15,6 @@ const port = process.env.PORT || 3000;
 
 // Trust first proxy
 app.set('trust proxy', 1);
-
-// Redis client for caching
-const redis = createClient({
-  url: process.env.REDIS_URL
-});
 
 // Middleware
 app.use(helmet());
@@ -53,7 +48,7 @@ app.get('/health', (req, res) => {
 
 async function startServer() {
   try {
-    await redis.connect();
+    await connectRedis();
     app.listen(port, () => {
       console.log(`Auth service listening on port ${port}`);
     });

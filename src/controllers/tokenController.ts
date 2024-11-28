@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { createClient } from 'redis';
+import { redisClient } from '../utils/redis';
 import { ApiKeyService } from '../services/apiKeyService';
 import { TokenService } from '../services/tokenService';
 
 export class TokenController {
-  private redis = createClient({ url: process.env.REDIS_URL });
   private apiKeyService: ApiKeyService;
   private tokenService: TokenService;
 
@@ -33,7 +32,7 @@ export class TokenController {
       const refreshToken = await this.tokenService.generateRefreshToken(user);
 
       // Cache refresh token
-      await this.redis.set(
+      await redisClient.set(
         `refresh_token:${user.id}`,
         refreshToken,
         { EX: 60 * 60 * 24 * 7 } // 7 days
@@ -67,7 +66,7 @@ export class TokenController {
       const newRefreshToken = await this.tokenService.generateRefreshToken(user);
 
       // Update cached refresh token
-      await this.redis.set(
+      await redisClient.set(
         `refresh_token:${user.id}`,
         newRefreshToken,
         { EX: 60 * 60 * 24 * 7 } // 7 days
