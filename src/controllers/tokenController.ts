@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import jwt from 'jsonwebtoken';
 import { redisClient } from '../utils/redis';
 import { ApiKeyService } from '../services/apiKeyService';
 import { TokenService } from '../services/tokenService';
