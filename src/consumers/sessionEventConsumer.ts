@@ -42,11 +42,20 @@ export class SessionEventConsumer {
       if (!msg) return;
 
       try {
-        const event = JSON.parse(msg.content.toString());
-        console.log('Received session event:', {
+        console.log('Raw message:', msg.content.toString());
+        const envelope = JSON.parse(msg.content.toString());
+        
+        // Extract the actual Clerk event from the envelope
+        const event = {
+          type: envelope.eventType,
+          data: envelope.data.data
+        };
+
+        console.log('Processed event:', {
           type: event.type,
           sessionId: event.data.id,
-          userId: event.data.user_id
+          userId: event.data.user_id,
+          status: event.data.status
         });
         
         await this.sessionService.handleSessionEvent(event);
@@ -54,7 +63,8 @@ export class SessionEventConsumer {
         this.channel?.ack(msg);
       } catch (error) {
         console.error('Error processing session event:', error);
-        this.channel?.nack(msg, false, true);
+        // Don't requeue parse errors
+        this.channel?.reject(msg, false);
       }
     }, { noAck: false });
   }
