@@ -20,3 +20,12 @@ This service is configured for deployment on Railway. Follow these steps to depl
 3. Add a Redis plugin to your Railway project: `railway add`
 4. Set up environment variables on Railway:
 
+## Environment Variables
+
+- `NEXT_PUBLIC_APP_URL`: Your frontend application URL (e.g., https://app.example.com)
+- `NEXT_PUBLIC_API_URL`: Your API URL (e.g., https://api.example.com)
+- `JWT_SECRET`: Secret key for JWT signing
+- `REDIS_URL`: Redis connection URL
+- `RABBITMQ_URL`: RabbitMQ connection URL
+- `PORT`: (Optional) Port number for the service (default: 3000)
+
