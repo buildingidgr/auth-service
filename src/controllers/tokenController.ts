@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { redisClient } from '../utils/redis';
 import { ApiKeyService } from '../services/apiKeyService';
 import { TokenService } from '../services/tokenService';
-import { ClerkSessionEvent } from '../services/sessionService';
+import { ClerkSessionEvent } from '../types/clerk';
 
 export class TokenController {
   private apiKeyService: ApiKeyService;
