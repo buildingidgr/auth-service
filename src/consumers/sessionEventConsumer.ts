@@ -1,4 +1,4 @@
-import amqp, { Channel, Connection } from 'amqplib';
+import amqplib, { Channel, Connection, ConsumeMessage } from 'amqplib';
 import { SessionService } from '../services/sessionService';
 
 export class SessionEventConsumer {
@@ -12,7 +12,7 @@ export class SessionEventConsumer {
 
   async connect(): Promise<void> {
     try {
-      this.connection = await amqp.connect(this.rabbitmqUrl);
+      this.connection = await amqplib.connect(this.rabbitmqUrl);
       this.channel = await this.connection.createChannel();
 
       await this.channel.assertQueue('session-events', {
@@ -36,7 +36,7 @@ export class SessionEventConsumer {
 
     await this.channel.prefetch(1);
 
-    this.channel.consume('session-events', async (msg) => {
+    this.channel.consume('session-events', async (msg: ConsumeMessage | null) => {
       if (!msg) return;
 
       try {
@@ -45,14 +45,17 @@ export class SessionEventConsumer {
         this.channel?.ack(msg);
       } catch (error) {
         console.error('Error processing session event:', error);
-        // Reject and requeue if it's a temporary failure
         this.channel?.nack(msg, false, true);
       }
     }, { noAck: false });
   }
 
   async shutdown(): Promise<void> {
-    await this.channel?.close();
-    await this.connection?.close();
+    try {
+      await this.channel?.close();
+      await this.connection?.close();
+    } catch (error) {
+      console.error('Error shutting down consumer:', error);
+    }
   }
 } 

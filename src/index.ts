@@ -9,6 +9,7 @@ import { tokenRouter } from './routes/token';
 import { errorHandler } from './middleware/errorHandler';
 import { validateRequest } from './middleware/validateRequest';
 import { connectRedis } from './utils/redis';
+import { SessionEventConsumer } from './consumers/sessionEventConsumer';
 
 const app = express();
 const port = process.env.PORT || 3000;
