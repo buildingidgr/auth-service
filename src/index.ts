@@ -55,6 +55,19 @@ app.get('/health', (req, res) => {
 async function startServer() {
   try {
     await connectRedis();
+    
+    // Initialize and start session event consumer
+    const sessionConsumer = new SessionEventConsumer(process.env.RABBITMQ_URL!);
+    await sessionConsumer.connect();
+    await sessionConsumer.consume();
+
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+      console.log('SIGTERM received. Shutting down...');
+      await sessionConsumer.shutdown();
+      process.exit(0);
+    });
+
     app.listen(port, () => {
       console.log(`Auth service listening on port ${port}`);
     });
