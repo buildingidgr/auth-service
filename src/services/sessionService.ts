@@ -28,6 +28,13 @@ export class SessionService {
   private async handleSessionCreated(sessionKey: string, userSessionsKey: string, event: ClerkSessionEvent): Promise<void> {
     const ttl = Math.floor((event.data.expire_at - Date.now()) / 1000);
     
+    console.log('Creating session in Redis:', {
+      sessionKey,
+      userSessionsKey,
+      ttl,
+      userId: event.data.user_id
+    });
+    
     await Promise.all([
       redisClient.set(sessionKey, JSON.stringify({
         userId: event.data.user_id,
@@ -37,6 +44,8 @@ export class SessionService {
       }), { EX: ttl }),
       redisClient.sAdd(userSessionsKey, event.data.id)
     ]);
+
+    console.log('Session created successfully in Redis');
   }
 
   private async handleSessionTermination(sessionKey: string, userSessionsKey: string, event: ClerkSessionEvent): Promise<void> {

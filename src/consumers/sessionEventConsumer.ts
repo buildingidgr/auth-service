@@ -36,12 +36,21 @@ export class SessionEventConsumer {
 
     await this.channel.prefetch(1);
 
+    console.log('Starting to consume session events from queue: session-events');
+
     this.channel.consume('session-events', async (msg: ConsumeMessage | null) => {
       if (!msg) return;
 
       try {
         const event = JSON.parse(msg.content.toString());
+        console.log('Received session event:', {
+          type: event.type,
+          sessionId: event.data.id,
+          userId: event.data.user_id
+        });
+        
         await this.sessionService.handleSessionEvent(event);
+        console.log('Successfully processed session event');
         this.channel?.ack(msg);
       } catch (error) {
         console.error('Error processing session event:', error);

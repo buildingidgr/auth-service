@@ -108,22 +108,32 @@ export class TokenController {
     try {
       const { sessionId, userId } = req.body;
       
+      console.log('Attempting to exchange session:', { sessionId, userId });
+
       if (!sessionId || !userId) {
         return res.status(400).json({ error: 'Session ID and User ID are required' });
       }
 
       // Verify session exists in Redis
       const sessionKey = `clerk_session:${sessionId}`;
+      console.log('Looking up session in Redis:', sessionKey);
+      
       const sessionData = await redisClient.get(sessionKey);
+      console.log('Session data from Redis:', sessionData);
 
       if (!sessionData) {
         return res.status(401).json({ error: 'Invalid session' });
       }
 
       const session = JSON.parse(sessionData);
+      console.log('Parsed session data:', session);
       
       // Verify session belongs to user
       if (session.userId !== userId) {
+        console.log('Session user ID mismatch:', {
+          sessionUserId: session.userId,
+          requestUserId: userId
+        });
         return res.status(401).json({ error: 'Session does not belong to user' });
       }
 
@@ -138,6 +148,8 @@ export class TokenController {
         redisClient.set(`refresh_token:${sessionId}`, refreshToken, { EX: 60 * 60 * 24 * 7 })
       ]);
 
+      console.log('Successfully exchanged session for tokens');
+
       res.json({
         access_token: accessToken,
         refresh_token: refreshToken,
@@ -145,6 +157,7 @@ export class TokenController {
         expires_in: 3600
       });
     } catch (error) {
+      console.error('Error exchanging session:', error);
       next(error);
     }
   }
