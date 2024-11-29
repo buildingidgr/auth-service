@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { redisClient } from '../utils/redis';
 import { ApiKeyService } from '../services/apiKeyService';
 import { TokenService } from '../services/tokenService';
+import { ClerkSessionEvent } from '../services/sessionService';
 
 export class TokenController {
   private apiKeyService: ApiKeyService;
@@ -99,6 +100,51 @@ export class TokenController {
       res.json({ isValid });
     } catch (error) {
       console.error('Error in validateToken:', error);
+      next(error);
+    }
+  }
+
+  async exchangeClerkSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { sessionId, userId } = req.body;
+      
+      if (!sessionId || !userId) {
+        return res.status(400).json({ error: 'Session ID and User ID are required' });
+      }
+
+      // Verify session exists in Redis
+      const sessionKey = `clerk_session:${sessionId}`;
+      const sessionData = await redisClient.get(sessionKey);
+
+      if (!sessionData) {
+        return res.status(401).json({ error: 'Invalid session' });
+      }
+
+      const session = JSON.parse(sessionData);
+      
+      // Verify session belongs to user
+      if (session.userId !== userId) {
+        return res.status(401).json({ error: 'Session does not belong to user' });
+      }
+
+      // Generate tokens
+      const user = { id: userId };
+      const accessToken = await this.tokenService.generateAccessToken(user);
+      const refreshToken = await this.tokenService.generateRefreshToken(user);
+
+      // Store tokens in Redis
+      await Promise.all([
+        redisClient.set(`access_token:${sessionId}`, accessToken, { EX: 3600 }),
+        redisClient.set(`refresh_token:${sessionId}`, refreshToken, { EX: 60 * 60 * 24 * 7 })
+      ]);
+
+      res.json({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        token_type: 'Bearer',
+        expires_in: 3600
+      });
+    } catch (error) {
       next(error);
     }
   }
