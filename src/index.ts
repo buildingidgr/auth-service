@@ -1,97 +1,99 @@
 import dotenv from 'dotenv';
-dotenv.config();
-
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { rateLimit } from 'express-rate-limit';
-import { tokenRouter } from './routes/token';
-import { errorHandler } from './middleware/errorHandler';
-import { validateRequest } from './middleware/validateRequest';
-import { connectRedis } from './utils/redis';
-import { SessionEventConsumer } from './consumers/sessionEventConsumer';
 
 const app = express();
-const port = process.env.PORT || 3000;
 
-// Ensure JWT_SECRET is set
-if (!process.env.JWT_SECRET) {
-  console.error('JWT_SECRET environment variable is not set');
-  process.exit(1);
-}
-
-// Trust first proxy
-app.set('trust proxy', 1);
-
-// Middleware
-app.use(helmet());
-app.use(cors({
-  origin: (origin, callback) => {
+// CORS Configuration
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) => {
     const allowedOrigins = [
       process.env.NEXT_PUBLIC_APP_URL,
-      process.env.NEXT_PUBLIC_API_URL
+      process.env.NEXT_PUBLIC_API_URL,
+      // Add localhost for development
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001'
     ].filter(Boolean);
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    console.log('Incoming origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      console.log(`Origin ${origin} not allowed by CORS`);
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
     }
   },
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Content-Length', 'X-Request-Id'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  exposedHeaders: [
+    'Content-Length',
+    'X-Request-Id',
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining'
+  ],
   credentials: true,
-  maxAge: 600 // 10 minutes cache for preflight requests
+  maxAge: 600, // 10 minutes cache for preflight requests
+  preflightContinue: false,
+  optionsSuccessStatus: 204
+};
+
+// Apply CORS middleware before other middleware
+app.use(cors(corsOptions));
+
+// Apply Helmet after CORS to prevent Helmet from interfering with CORS headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  crossOriginOpenerPolicy: { policy: "same-origin" },
 }));
-app.use(express.json());
-app.use(validateRequest);
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100 // limit each IP to 100 requests per windowMs
-});
-app.use(limiter);
-
-// Routes
-app.use('/v1/token', tokenRouter);
-
-// Error handling
-app.use(errorHandler);
-
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'healthy' });
+// Additional middleware for CORS debugging
+app.use((req, res, next) => {
+  console.log('Request headers:', req.headers);
+  console.log('Request method:', req.method);
+  console.log('Request origin:', req.get('origin'));
+  next();
 });
 
-// Handle preflight requests
-app.options('*', cors());
+// Preflight request handler
+app.options('*', cors(corsOptions));
 
-async function startServer() {
-  try {
-    await connectRedis();
+// Error handling middleware specifically for CORS errors
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (err.message.includes('CORS')) {
+    console.error('CORS Error:', {
+      error: err.message,
+      origin: req.get('origin'),
+      method: req.method,
+      path: req.path
+    });
     
-    // Initialize and start session event consumer
-    const sessionConsumer = new SessionEventConsumer(process.env.RABBITMQ_URL!);
-    await sessionConsumer.connect();
-    await sessionConsumer.consume();
-
-    // Graceful shutdown
-    process.on('SIGTERM', async () => {
-      console.log('SIGTERM received. Shutting down...');
-      await sessionConsumer.shutdown();
-      process.exit(0);
+    return res.status(403).json({
+      error: 'CORS Error',
+      message: 'Origin not allowed',
+      allowedOrigins: [
+        process.env.NEXT_PUBLIC_APP_URL,
+        process.env.NEXT_PUBLIC_API_URL
+      ].filter(Boolean)
     });
-
-    app.listen(port, () => {
-      console.log(`Auth service listening on port ${port}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
   }
-}
+  next(err);
+});
 
-startServer();
-
+export { corsOptions };
