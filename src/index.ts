@@ -5,17 +5,23 @@ import helmet from 'helmet';
 
 const app = express();
 
-// Get allowed origins from environment variables
+// Get allowed origins from environment variables and filter out undefined values
 const allowedOrigins = [
   process.env.NEXT_PUBLIC_APP_URL,
   process.env.NEXT_PUBLIC_API_URL,
   'http://localhost:3000',
   'http://localhost:3001'
-].filter(Boolean);
+].filter((origin): origin is string => !!origin);
 
-// CORS middleware
+// CORS middleware with proper type handling
 app.use(cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -50,7 +56,13 @@ app.use((req, res, next) => {
 
 // Preflight request handler
 app.options('*', cors({
-  origin: allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
@@ -70,10 +82,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
     return res.status(403).json({
       error: 'CORS Error',
       message: 'Origin not allowed',
-      allowedOrigins: [
-        process.env.NEXT_PUBLIC_APP_URL,
-        process.env.NEXT_PUBLIC_API_URL
-      ].filter(Boolean)
+      allowedOrigins
     });
   }
   next(err);
