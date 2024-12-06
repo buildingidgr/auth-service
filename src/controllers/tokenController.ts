@@ -105,32 +105,44 @@ export class TokenController {
   }
 
   async exchangeClerkSession(req: Request, res: Response, next: NextFunction) {
+    const startTime = Date.now();
+    console.log('🔵 [Clerk Exchange] Request received:', {
+      timestamp: new Date().toISOString(),
+      body: req.body,
+      headers: {
+        'content-type': req.headers['content-type'],
+        origin: req.headers.origin
+      }
+    });
+
     try {
       const { sessionId, userId } = req.body;
       
-      console.log('Attempting to exchange session:', { sessionId, userId });
+      console.log('🔍 [Clerk Exchange] Validating request:', { sessionId, userId });
 
       if (!sessionId || !userId) {
+        console.log('❌ [Clerk Exchange] Missing required fields:', { sessionId, userId });
         return res.status(400).json({ error: 'Session ID and User ID are required' });
       }
 
       // Verify session exists in Redis
       const sessionKey = `clerk_session:${sessionId}`;
-      console.log('Looking up session in Redis:', sessionKey);
+      console.log('🔍 [Clerk Exchange] Looking up session:', { sessionKey });
       
       const sessionData = await redisClient.get(sessionKey);
-      console.log('Session data from Redis:', sessionData);
+      console.log('📦 [Clerk Exchange] Redis session data:', { sessionData });
 
       if (!sessionData) {
+        console.log('❌ [Clerk Exchange] Session not found in Redis:', { sessionKey });
         return res.status(401).json({ error: 'Invalid session' });
       }
 
       const session = JSON.parse(sessionData);
-      console.log('Parsed session data:', session);
+      console.log('🔄 [Clerk Exchange] Parsed session:', { session });
       
       // Verify session belongs to user
       if (session.userId !== userId) {
-        console.log('Session user ID mismatch:', {
+        console.log('❌ [Clerk Exchange] Session user mismatch:', {
           sessionUserId: session.userId,
           requestUserId: userId
         });
@@ -139,25 +151,38 @@ export class TokenController {
 
       // Generate tokens
       const user = { id: userId };
+      console.log('🔑 [Clerk Exchange] Generating tokens for user:', { userId });
+      
       const accessToken = await this.tokenService.generateAccessToken(user);
       const refreshToken = await this.tokenService.generateRefreshToken(user);
 
       // Store tokens in Redis
+      console.log('💾 [Clerk Exchange] Storing tokens in Redis');
       await Promise.all([
         redisClient.set(`access_token:${sessionId}`, accessToken, { EX: 3600 }),
         redisClient.set(`refresh_token:${sessionId}`, refreshToken, { EX: 60 * 60 * 24 * 7 })
       ]);
 
-      console.log('Successfully exchanged session for tokens');
-
-      res.json({
+      const response = {
         access_token: accessToken,
         refresh_token: refreshToken,
         token_type: 'Bearer',
         expires_in: 3600
+      };
+
+      console.log('✅ [Clerk Exchange] Success:', {
+        userId,
+        sessionId,
+        duration: `${Date.now() - startTime}ms`
       });
+
+      res.json(response);
     } catch (error) {
-      console.error('Error exchanging session:', error);
+      console.error('💥 [Clerk Exchange] Error:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        duration: `${Date.now() - startTime}ms`
+      });
       next(error);
     }
   }
