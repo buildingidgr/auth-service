@@ -7,37 +7,28 @@ const app = express();
 
 // Get allowed origins from environment variables and filter out undefined values
 const allowedOrigins = [
-  process.env.NEXT_PUBLIC_APP_URL,
-  process.env.NEXT_PUBLIC_API_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://auth-service-production-16ee.up.railway.app'
+  'http://localhost:3000',                                         // Local development
+  'https://auth-service-production-16ee.up.railway.app',          // Railway production URL
+  process.env.NEXT_PUBLIC_APP_URL,                                // Frontend production URL
+  process.env.NEXT_PUBLIC_API_URL                                 // API production URL
 ].filter((origin): origin is string => !!origin);
 
-// CORS middleware with proper type handling and debug logging
+// Simplified CORS configuration
 app.use(cors({
-  origin: (origin, callback) => {
-    console.log('Incoming request from origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.log('Origin not allowed:', origin);
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['Content-Length', 'X-Request-Id'],
   maxAge: 600
 }));
+
+// Debug middleware to log CORS-related information
+app.use((req, res, next) => {
+  console.log('Request Origin:', req.headers.origin);
+  console.log('Allowed Origins:', allowedOrigins);
+  next();
+});
 
 // Apply Helmet after CORS
 app.use(helmet({
@@ -55,22 +46,7 @@ app.use((req, res, next) => {
 
 // Preflight request handler
 app.options('*', cors({
-  origin: (origin, callback) => {
-    console.log('Incoming request from origin:', origin);
-    console.log('Allowed origins:', allowedOrigins);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) {
-      return callback(null, true);
-    }
-
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-
-    console.log('Origin not allowed:', origin);
-    callback(new Error('Not allowed by CORS'));
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
