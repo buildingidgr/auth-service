@@ -10,35 +10,34 @@ const allowedOrigins = [
   process.env.NEXT_PUBLIC_APP_URL,
   process.env.NEXT_PUBLIC_API_URL,
   'http://localhost:3000',
-  'http://localhost:3001'
+  'http://localhost:3001',
+  'https://auth-service-production-16ee.up.railway.app'
 ].filter((origin): origin is string => !!origin);
 
-// CORS middleware with proper type handling
+// CORS middleware with proper type handling and debug logging
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    console.log('Incoming request from origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log('Origin not allowed:', origin);
+    callback(new Error('Not allowed by CORS'));
   },
+  credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
   maxAge: 600
 }));
-
-// Additional CORS headers middleware
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', origin);
-    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-  }
-  next();
-});
 
 // Apply Helmet after CORS
 app.use(helmet({
@@ -57,15 +56,25 @@ app.use((req, res, next) => {
 // Preflight request handler
 app.options('*', cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
+    console.log('Incoming request from origin:', origin);
+    console.log('Allowed origins:', allowedOrigins);
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    console.log('Origin not allowed:', origin);
+    callback(new Error('Not allowed by CORS'));
   },
+  credentials: true,
   methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
+  exposedHeaders: ['Content-Length', 'X-Request-Id'],
   maxAge: 600
 }));
 
