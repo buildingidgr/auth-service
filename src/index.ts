@@ -6,6 +6,7 @@ import { connectRedis } from './utils/redis';
 import { tokenRouter } from './routes/token';
 import { errorHandler } from './middleware/errorHandler';
 import { validateRequest } from './middleware/validateRequest';
+import { SessionEventConsumer } from './consumers/sessionEventConsumer';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -88,6 +89,13 @@ async function initializeApp() {
     await connectRedis();
     console.log('✅ Redis connected successfully');
 
+    // Initialize and start RabbitMQ consumer
+    console.log('🐰 Connecting to RabbitMQ...');
+    const consumer = new SessionEventConsumer(process.env.RABBITMQ_URL!);
+    await consumer.connect();
+    await consumer.consume();
+    console.log('✅ RabbitMQ consumer started successfully');
+
     // Express middleware setup
     app.use(express.json());
     app.use(validateRequest);
@@ -114,6 +122,13 @@ async function initializeApp() {
 
     // Error handling
     app.use(errorHandler);
+
+    // Add graceful shutdown for the consumer
+    process.on('SIGTERM', async () => {
+      console.log('📤 Shutting down RabbitMQ consumer...');
+      await consumer.shutdown();
+      process.exit(0);
+    });
 
     // Start server
     app.listen(port, () => {
