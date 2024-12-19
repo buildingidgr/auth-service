@@ -96,8 +96,8 @@ export class TokenController {
         return res.status(400).json({ error: 'Token is required' });
       }
 
-      const isValid = await this.tokenService.validateAccessToken(token);
-      res.json({ isValid });
+      const validation = await this.tokenService.validateAccessToken(token);
+      res.json(validation);
     } catch (error) {
       console.error('Error in validateToken:', error);
       next(error);
@@ -170,7 +170,7 @@ export class TokenController {
         expires_in: 3600
       };
 
-      console.log('✅ [Clerk Exchange] Success:', {
+      console.log('��� [Clerk Exchange] Success:', {
         userId,
         sessionId,
         duration: `${Date.now() - startTime}ms`

@@ -19,12 +19,16 @@ export class TokenService {
     return jwt.sign({ sub: user.id, type: 'refresh' }, this.jwtSecret, { expiresIn: '7d' });
   }
 
-  async validateAccessToken(token: string): Promise<boolean> {
+  async validateAccessToken(token: string): Promise<{ isValid: boolean; userId?: string }> {
     try {
-      const decoded = jwt.verify(token, this.jwtSecret);
-      return typeof decoded !== 'string' && decoded.type === 'access';
+      const decoded = jwt.verify(token, this.jwtSecret) as jwt.JwtPayload;
+      const isValid = decoded.type === 'access';
+      return {
+        isValid,
+        userId: isValid ? decoded.sub : undefined
+      };
     } catch {
-      return false;
+      return { isValid: false };
     }
   }
 
