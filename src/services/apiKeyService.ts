@@ -15,14 +15,5 @@ export class ApiKeyService {
 
     return { id: userId };
   }
-
-  async storeApiKey(apiKey: string, userId: string): Promise<void> {
-    const hashedKey = crypto
-      .createHash('sha256')
-      .update(apiKey)
-      .digest('hex');
-
-    await redisClient.set(`api_key:${hashedKey}`, userId);
-  }
 }
 
