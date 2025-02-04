@@ -7,6 +7,7 @@ import { tokenRouter } from './routes/token';
 import { errorHandler } from './middleware/errorHandler';
 import { validateRequest } from './middleware/validateRequest';
 import { SessionEventConsumer } from './consumers/sessionEventConsumer';
+import { ApiKeyMappingConsumer } from './consumers/apiKeyMappingConsumer';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -89,12 +90,17 @@ async function initializeApp() {
     await connectRedis();
     console.log('✅ Redis connected successfully');
 
-    // Initialize and start RabbitMQ consumer
+    // Initialize and start RabbitMQ consumers
     console.log('🐰 Connecting to RabbitMQ...');
-    const consumer = new SessionEventConsumer(process.env.RABBITMQ_URL!);
-    await consumer.connect();
-    await consumer.consume();
-    console.log('✅ RabbitMQ consumer started successfully');
+    const sessionConsumer = new SessionEventConsumer(process.env.RABBITMQ_URL!);
+    const apiKeyMappingConsumer = new ApiKeyMappingConsumer(process.env.RABBITMQ_URL!);
+    
+    await sessionConsumer.connect();
+    await apiKeyMappingConsumer.connect();
+    
+    await sessionConsumer.consume();
+    await apiKeyMappingConsumer.consume();
+    console.log('✅ RabbitMQ consumers started successfully');
 
     // Express middleware setup
     app.use(express.json());
@@ -123,10 +129,11 @@ async function initializeApp() {
     // Error handling
     app.use(errorHandler);
 
-    // Add graceful shutdown for the consumer
+    // Add graceful shutdown for both consumers
     process.on('SIGTERM', async () => {
-      console.log('📤 Shutting down RabbitMQ consumer...');
-      await consumer.shutdown();
+      console.log('📤 Shutting down RabbitMQ consumers...');
+      await sessionConsumer.shutdown();
+      await apiKeyMappingConsumer.shutdown();
       process.exit(0);
     });
 
