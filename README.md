@@ -1,31 +1,85 @@
 # Auth Service
 
-This is an authentication service built with Express.js and TypeScript, designed to work with Railway deployment.
+A secure authentication service for managing API keys and user authentication.
 
 ## Features
 
-- API key exchange for JWT
-- Token refresh
-- Token validation
-- Rate limiting
-- CORS configuration
-- Health check endpoint
+- API Key management
+- Secure storage using Redis
+- Protected endpoints with API secret authentication
+- Docker support
+- Railway deployment ready
 
-## Deployment
+## Prerequisites
 
-This service is configured for deployment on Railway. Follow these steps to deploy:
-
-1. Ensure you have a Railway account and the Railway CLI installed.
-2. Initialize a new Railway project: `railway init`
-3. Add a Redis plugin to your Railway project: `railway add`
-4. Set up environment variables on Railway:
+- Node.js >= 18
+- Redis
+- Docker (optional)
 
 ## Environment Variables
 
-- `NEXT_PUBLIC_APP_URL`: Your frontend application URL (e.g., https://app.example.com)
-- `NEXT_PUBLIC_API_URL`: Your API URL (e.g., https://api.example.com)
-- `JWT_SECRET`: Secret key for JWT signing
-- `REDIS_URL`: Redis connection URL
-- `RABBITMQ_URL`: RabbitMQ connection URL
-- `PORT`: (Optional) Port number for the service (default: 3000)
+Copy `.env.example` to `.env` and configure:
+
+```bash
+API_SECRET=your-secret-key-here
+REDIS_URL=redis://localhost:6379
+```
+
+## Local Development
+
+1. Install dependencies:
+```bash
+npm install
+```
+
+2. Start development server:
+```bash
+npm run dev
+```
+
+## API Endpoints
+
+### Store API Key
+- **POST** `/api-key/store`
+- **Headers**: 
+  - `X-API-Secret`: Your API secret
+- **Body**:
+```json
+{
+  "apiKey": "your-api-key",
+  "userId": "user-id"
+}
+```
+
+### Health Check
+- **GET** `/health`
+
+## Deployment to Railway
+
+1. Create a new project on Railway
+2. Connect your GitHub repository
+3. Add the following environment variables in Railway:
+   - `API_SECRET`
+   - `REDIS_URL`
+4. Deploy!
+
+## Docker
+
+Build the image:
+```bash
+docker build -t auth-service .
+```
+
+Run the container:
+```bash
+docker run -p 3000:3000 --env-file .env auth-service
+```
+
+## Scripts
+
+- `npm start` - Start production server
+- `npm run dev` - Start development server
+- `npm run build` - Build TypeScript code
+- `npm run lint` - Run ESLint
+- `npm run format` - Format code with Prettier
 
