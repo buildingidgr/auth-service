@@ -43,11 +43,16 @@ export class ApiKeyMappingConsumer {
         console.log('Received api key mapping:', content);
         
         const mapping = JSON.parse(content);
-        const { hashed_api_key, clerk_user_id } = mapping;
+        
+        // Validate the message format
+        if (!mapping.key || !mapping.value || 
+            typeof mapping.key !== 'string' || 
+            typeof mapping.value !== 'string') {
+          throw new Error('Invalid message format: missing or invalid key/value fields');
+        }
 
-        // Store the mapping in Redis
-        const key = `api_key:${hashed_api_key}`;
-        await redisClient.set(key, clerk_user_id);
+        // Store the mapping in Redis using the provided key and value directly
+        await redisClient.set(mapping.key, mapping.value);
         
         console.log('Successfully stored API key mapping in Redis');
         this.channel?.ack(msg);
