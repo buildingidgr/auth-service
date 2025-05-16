@@ -1,4 +1,5 @@
-import connect, { Channel, Connection, ConsumeMessage } from 'amqplib';
+import amqplib from 'amqplib';
+import { Channel, Connection, ConsumeMessage } from 'amqplib';
 import { redisClient } from '../utils/redis';
 
 export class ApiKeyMappingConsumer {
@@ -9,7 +10,7 @@ export class ApiKeyMappingConsumer {
 
   async connect(): Promise<void> {
     try {
-      this.connection = await connect(this.rabbitmqUrl);
+      this.connection = await amqplib(this.rabbitmqUrl);
       if (!this.connection) {
         throw new Error('Failed to establish RabbitMQ connection');
       }
