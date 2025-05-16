@@ -1,4 +1,4 @@
-import amqplib, { Channel, Connection, ConsumeMessage } from 'amqplib';
+import connect, { Channel, Connection, ConsumeMessage } from 'amqplib';
 import { SessionService } from '../services/sessionService';
 
 export class SessionEventConsumer {
@@ -12,8 +12,15 @@ export class SessionEventConsumer {
 
   async connect(): Promise<void> {
     try {
-      this.connection = await amqplib.connect(this.rabbitmqUrl);
+      this.connection = await connect(this.rabbitmqUrl);
+      if (!this.connection) {
+        throw new Error('Failed to establish RabbitMQ connection');
+      }
+      
       this.channel = await this.connection.createChannel();
+      if (!this.channel) {
+        throw new Error('Failed to create RabbitMQ channel');
+      }
 
       await this.channel.assertQueue('session-events', {
         durable: true,
